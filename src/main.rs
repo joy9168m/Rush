@@ -48,8 +48,41 @@ fn external_exucutable(cmd: &str) {
     }
 }
 
+fn builtin_cd(args: &[&str]) -> Result<i32, ()> {
+    if args.len() == 1 {
+        let home = match env::var("HOME") {
+            Ok(h) => h,
+            Err(_) => {
+                println!("cd: HOME not set");
+                return Err(());
+            }
+        };
+
+        return if env::set_current_dir(&home).is_ok() {
+            println!("cd to home");
+            Ok(0)
+        } else {
+            println!("cd: {}: No such file or directory", home);
+            Err(())
+        };
+    }
+
+    if args.len() != 2 {
+        println!("Usage: cd <directory>");
+        return Err(());
+    }
+
+    if env::set_current_dir(args[1]).is_ok() {
+        println!("cd to {}", args[1]);
+        Ok(0)
+    } else {
+        println!("cd: {}: No such file or directory", args[1]);
+        Err(())
+    }
+}
+
 fn main() {
-    let valid_commands = ["echo", "exit", "type"];
+    let valid_commands = ["echo", "exit", "type", "pwd", "cd"];
     loop {
         print!("$ ");
 
@@ -58,9 +91,8 @@ fn main() {
         let mut command = String::new();
 
         io::stdin().read_line(&mut command).unwrap();
-
         let cmnd = command.trim();
-
+        let arg: Vec<&str> = cmnd.split_whitespace().collect();
         if cmnd == "exit" {
             break;
         } else if cmnd.starts_with("echo") {
@@ -81,6 +113,12 @@ fn main() {
             external_exucutable(cmnd);
         } else if cmnd.starts_with("pwd") {
             println!("{}", env::current_dir().unwrap().display())
+        } else if cmnd.starts_with("cd") {
+            let _ = builtin_cd(&arg);
+        } else if cmnd.starts_with("ls") {
+            let run = Command::new("ls").status();
+            // using default ls in bin folder not builtin ls
+            println!("{:?}", run);
         } else {
             let first_word = cmnd.split_whitespace().next().unwrap_or(cmnd);
             println!("{}: command not found", first_word);
