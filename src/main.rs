@@ -1,3 +1,4 @@
+use shell_words;
 use std::env;
 use std::fs;
 use std::io;
@@ -5,7 +6,6 @@ use std::io::Write;
 use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
 use std::process::Command;
-
 fn find_in_path(cmd: &str) -> Option<String> {
     let path_var = match env::var("PATH") {
         Ok(value) => value,
@@ -96,12 +96,15 @@ fn main() {
         if cmnd == "exit" {
             break;
         } else if cmnd.starts_with("echo") {
-            print!("{}", &command[5..]);
+            let parts = shell_words::split(cmnd).unwrap();
+            let word = &parts[1..].join(" ");
+            println!("{}", &word);
         } else if cmnd.starts_with("type") {
             let Some(arg) = cmnd.strip_prefix("type ") else {
                 // .strip_prefix returns a <option &str>
                 continue;
             };
+
             if valid_commands.contains(&arg) {
                 println!("{} is a shell builtin", arg);
             } else if let Some(full_path) = find_in_path(arg) {
